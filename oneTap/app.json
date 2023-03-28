@@ -9,7 +9,10 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#ffffff",
+      "notification": {
+        "iosDisplayInForeground": true
+      }
     },
     "assetBundlePatterns": [
       "**/*"

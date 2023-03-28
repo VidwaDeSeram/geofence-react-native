@@ -4,6 +4,36 @@ import { StyleSheet, Text, View } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Polygon, Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { smallerGeofences, mainGeofence, checkLocationInGeofences } from './geofenceModel';
+import * as Notifications from 'expo-notifications';
+
+const requestNotificationPermissions = async () => {
+  const { status } = await Notifications.requestPermissionsAsync();
+  if (status !== 'granted') {
+    console.warn('Notification permission not granted');
+  }
+};
+const showNotification = async (title, body) => {
+  await Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: title,
+      body: body,
+      sound: 'default',
+      priority: 'high',
+      vibrate: [100, 50, 100],
+    },
+    trigger: null,
+  });
+};
+
+
 
 export default function App() {
   const [location, setLocation] = useState(null);
@@ -30,19 +60,21 @@ export default function App() {
           timeInterval: 1000,
           distanceInterval: 10,
         },
-        (newLocation) => {
-          setLocation(newLocation);
+        (location) => {
+          setLocation(location);
           setRegion({
-            latitude: newLocation.coords.latitude,
-            longitude: newLocation.coords.longitude,
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
             latitudeDelta: 0.05,
             longitudeDelta: 0.05,
           });
-          checkLocation(newLocation.coords);
+          checkLocation(location.coords);
         }
       );
     };
 
+    // Call requestNotificationPermissions function here
+    requestNotificationPermissions();
     getLocationAsync();
 
     return () => {
@@ -52,11 +84,18 @@ export default function App() {
     };
   }, []);
 
+
   const checkLocation = (coords) => {
     const { insideMain, geofenceName } = checkLocationInGeofences(coords, smallerGeofences, mainGeofence);
+
+    if (insideMain && geofenceName && geofenceName !== currentGeofence) {
+      showNotification('Geofence Alert', `You are now inside the ${geofenceName} geofence.`);
+    }
+
     setInsideMainGeofence(insideMain);
     setCurrentGeofence(geofenceName);
   };
+
 
   return (
     <View style={styles.container}>
