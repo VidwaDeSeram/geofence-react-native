@@ -1,38 +1,11 @@
-import * as geolib from 'geolib';
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Polygon, Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { smallerGeofences, mainGeofence, checkLocationInGeofences } from './geofenceModel';
-import * as Notifications from 'expo-notifications';
 
-const requestNotificationPermissions = async () => {
-  const { status } = await Notifications.requestPermissionsAsync();
-  if (status !== 'granted') {
-    console.warn('Notification permission not granted');
-  }
-};
-const showNotification = async (title, body) => {
-  await Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
-  });
-
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: title,
-      body: body,
-      sound: 'default',
-      priority: 'high',
-      vibrate: [100, 50, 100],
-    },
-    trigger: null,
-  });
-};
-
+import { smallerGeofences, mainGeofence, checkLocationInGeofences } from './geofences';
+import { askPermissions, registerBackgroundLocationTask, requestNotificationPermissions, showNotification, createNotificationChannel } from './permissions';
+import styles from './styles';
 
 
 export default function App() {
@@ -48,32 +21,35 @@ export default function App() {
 
   useEffect(() => {
     let watchId;
+    (async () => {
+      if (await askPermissions()) {
+        await registerBackgroundLocationTask();
+      }
+    })();
+
     const getLocationAsync = async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied');
+        console.warn('Permission to access location was denied');
+        return;
       }
+
+      let location = await Location.getCurrentPositionAsync({});
+      setLocation(location);
 
       watchId = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
-          timeInterval: 1000,
-          distanceInterval: 10,
+          timeInterval: 5000,
+          distanceInterval: 20,
         },
-        (location) => {
-          setLocation(location);
-          setRegion({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          });
-          checkLocation(location.coords);
+        (newLocation) => {
+          setLocation(newLocation);
+          checkLocation(newLocation.coords);
         }
       );
     };
 
-    // Call requestNotificationPermissions function here
     requestNotificationPermissions();
     getLocationAsync();
 
@@ -84,18 +60,17 @@ export default function App() {
     };
   }, []);
 
-
-  const checkLocation = (coords) => {
+  const checkLocation = async (coords) => {
     const { insideMain, geofenceName } = checkLocationInGeofences(coords, smallerGeofences, mainGeofence);
 
     if (insideMain && geofenceName && geofenceName !== currentGeofence) {
-      showNotification('Geofence Alert', `You are now inside the ${geofenceName} geofence.`);
+      const channelId = await createNotificationChannel();
+      showNotification('Geofence Alert', `You are now inside the ${geofenceName} geofence.`, channelId);
     }
 
     setInsideMainGeofence(insideMain);
     setCurrentGeofence(geofenceName);
   };
-
 
   return (
     <View style={styles.container}>
@@ -133,34 +108,3 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5FCFF',
-  },
-  map: {
-    width: '100%',
-    height: '100%',
-  },
-  notificationPanel: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    backgroundColor: 'white',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 5,
-    borderColor: '#999',
-    borderWidth: 1,
-  },
-  notificationTitle: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginBottom: 5,
-  },
-  status: {
-    fontSize: 14,
-  },
-});    

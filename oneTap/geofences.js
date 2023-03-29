@@ -59,3 +59,4 @@ export const checkLocationInGeofences = (coords, geofences, mainGeofence) => {
     }
     return { insideMain, geofenceName: null };
 };
+
