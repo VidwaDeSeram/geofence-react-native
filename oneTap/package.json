@@ -21,6 +21,7 @@
     "geolib": "^3.3.3",
     "react": "18.2.0",
     "react-native": "0.71.4",
+    "react-native-background-actions": "^3.0.0",
     "react-native-geo-fencing": "^0.1.0",
     "react-native-maps": "^1.4.0"
   },
