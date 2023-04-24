@@ -1,6 +1,6 @@
-import React from 'react';
-import MapView, { Polygon } from 'react-native-maps';
-import { geofences } from './geofenceController';
+import React from "react";
+import MapView, { Polygon } from "react-native-maps";
+import { geofences } from "./geofenceModel";
 
 const GeofencingMap = () => {
   return (
@@ -16,7 +16,9 @@ const GeofencingMap = () => {
       {geofences.map((geofences) => (
         <Polygon
           key={geofences.id}
-          coordinates={geofences.coordinates.geometry.coordinates[0].map(([lng, lat]) => ({ latitude: lat, longitude: lng }))}
+          coordinates={geofences.coordinates.geometry.coordinates[0].map(
+            ([lng, lat]) => ({ latitude: lat, longitude: lng })
+          )}
           strokeColor="#000"
           fillColor="rgba(255,0,0,0.2)"
         />
